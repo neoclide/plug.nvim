@@ -1,0 +1,20 @@
+{
+  "name": "@chemzqm/plug.nvim",
+  "version": "1.0.0",
+  "description": "neovim plugin management",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">6.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "chemzqm@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "neovim-client": "^2.1.0",
+    "node-parallel": "^0.1.6",
+    "node-serial": "^0.1.1",
+    "semver": "^5.3.0"
+  }
+}
