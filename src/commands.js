@@ -34,9 +34,14 @@ class Commands {
     let shouldUpdate = false
     dirs.forEach(dir => {
       p.add(done => {
-        util.isRemote(dir).then(res => {
-          if (res) shouldUpdate = true
-          done()
+        let docRoot = path.join(dir, 'doc')
+        util.isDirectory(docRoot).then(res => {
+          if (res) this.nvim.command(`helptags ${docRoot}`, () => {})
+        }).then(() => {
+          util.isRemote(dir).then(res => {
+            if (res) shouldUpdate = true
+            done()
+          }, done)
         }, done)
       })
     })
