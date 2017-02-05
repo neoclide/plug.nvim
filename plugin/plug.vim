@@ -20,8 +20,7 @@ function! s:SetDisplayView()
 endfunction
 
 function! s:SmartQuit()
-  let running = 0
-  if !running | bwipe | endif
+  if !get(g:, 'plug_updating', 0) | bwipe | endif
   if get(g:, 'plug_window', '') =~# 'edit'
     bprevious!
   else

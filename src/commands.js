@@ -18,6 +18,17 @@ class Commands {
     this.plugins = config.plugins
 
     this.useRebase = config.rebase && semver.gt(config.version, '2.9.0')
+
+    let updating = false
+    Object.defineProperty(this, 'updating', {
+      get: () => {
+        return updating
+      },
+      set: val => {
+        this.nvim.command(`let g:plug_updating=${val ? 1 : 0}`, () => { })
+        updating = val
+      }
+    })
   }
   updateRemote() {
     let stats = this.status
@@ -152,10 +163,7 @@ class Commands {
     lines.push('')
     lines = lines.concat(arr.reverse())
     this.nvim.bufSetLines(buf, 0, lines.length, false, lines, err => {
-      if (err) {
-        console.error(err.message)
-        process.exit(1)
-      }
+      if (err) console.error(err.message)
     })
   }
   updatePlug(plugin) {
@@ -281,9 +289,7 @@ class Commands {
     }
     let msgs = this.logs[plugin.directory]
     this.nvim.bufSetLines(buf, 0, msgs.length, false, msgs, err => {
-      if (err) {
-        console.error(err.message)
-      }
+      if (err) console.error(err.message)
     })
   }
   diff(buf, name) {
@@ -309,16 +315,13 @@ class Commands {
     exec(`git --no-pager diff --no-color ${revs.from} ${revs.to}`, {
       cwd: plugin.directory
     }, (err, stdout) => {
-      this.nvim.command(`let g:b="${buf || 'wtf'}"`, () => { })
       if (err) {
         msgs.push('Error: ' + err.message)
       } else {
         msgs = stdout.split(/\r?\n/)
       }
       this.nvim.bufSetLines(buf, 0, msgs.length, false, msgs, err => {
-        if (err) {
-          console.error(err.message)
-        }
+        if (err) console.error(err.message)
       })
     })
   }
