@@ -5,6 +5,7 @@ endif
 let did_plug_loaded = 1
 
 command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call plug#update(<f-args>)
+command! -nargs=0 PlugClean :call plug#clean()
 
 function! s:SetDisplayView()
   setlocal filetype=plug

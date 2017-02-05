@@ -7,7 +7,7 @@ None block plugin manager using neovim job-control feature.
 * Async and run git commands in parallel
 * Quick remap for view update logs and diffs
 * High performance for speedup (no remote host)
-* Run `UpdateRemotePlugins` command only when necessary
+* Run `UpdateRemotePlugins` command and generate helptags when necessary
 * No cache, no magic
 
 ## Install
@@ -43,6 +43,7 @@ syntax on
 * `g:plug_window`: edit command for plug window, default to `10 split`
 * `g:plug_rebase`: use rebase (git pull --rebase --autostash) for update, default to `0`
 * `g:plug_url_format`: format string for git remote location, default: `git@github.com:%s.git`
+* `g:plug_clean_command`: custom command for remove directory by `PlugClean`, default is `rm -rf` (or `rmdir` on windows)
 
 ## Keymaps
 
@@ -72,8 +73,8 @@ Plug.nvim only support install plugins from **github**.
 `option` is a viml dictionary, it could contains following: 
 
 * `dir` custom parent directory for this plugin
-* `frozen` not run update or install for this plugin if `1`
-* `do` command string that would be run in plugin folder after install/update
+* `frozen` not run update or install for this plugin when is `1`
+* `do` command that would be run in plugin folder after install/update
 * `as` specify an alias name for plugin folder to avoid conflict
 
 **Notice** no lazyload stuff would be available, it's useless for neovim.
@@ -82,11 +83,33 @@ Plug.nvim only support install plugins from **github**.
 
 Update/install all plugins.
 
-### `PlugUpdate [plug_name]`
+### `PlugUpdate [name]`
 
-Update/install a specific plugin.
+Update/install a specific plugin, use `tab` to complete name.
 
-## TODO
+### `PlugClean`
 
-* Command for clean up unused plugins.
-* Generate help tags.
+Helper command for clean unused plugin inside the root directory, prompt is used
+before actually remove the directory
+
+## LICENSE
+
+Copyright 2017 chemzqm@gmail.com
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

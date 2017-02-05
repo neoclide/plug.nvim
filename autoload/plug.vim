@@ -10,6 +10,7 @@ let s:plug_root = ''
 let s:plug_plugins = []
 let s:plug_after_plugins = []
 let s:plug_loaded = 0
+let s:is_win = has("win32") || has('win64')
 
 let s:job_opts = {'rpc': v:true}
 let s:script = expand('<sfile>:h:h').'/src/plug.js'
@@ -54,10 +55,61 @@ endfunction
 "  if succ | echo 'ok' | endif
 "endfunction
 
+function! plug#clean()
+  if empty(s:plug_root)
+    echoerr '[plug.nvim] plug root not found'
+    return
+  endif
+  let plug_dirs = map(copy(s:plug_plugins), "v:val['directory']")
+  let dirs = split(glob(s:plug_root.'/*'), "\n")
+  let rm_cmd = get(g:, 'plug_clean_command', 0)
+  for dir in dirs
+    if isdirectory(dir) && index(plug_dirs, dir) == -1
+      if input('Remove directory '.dir.'? [y/n]') =~ 'y'
+        if rm_cmd
+          call system(rm_cmd.' '.shellescape(dir))
+        else
+          call s:rm_rf(dir)
+        endif
+      endif
+    endif
+  endfor
+endfunction
+
 function! plug#begin(...)
   let s:plug_root = get(a:, 1, s:home().'/bundle')
   if !isdirectory(s:plug_root)
     call mkdir(s:plug_root, 'p', 0700)
+  endif
+  let paths = split(&runtimepath, ",")
+  let find = 0
+  for p in paths
+    if p =~# 'plug\.nvim$'
+      let find = 1
+      call add(s:plug_plugins, {
+            \ 'name': 'plug.nvim',
+            \ 'directory': p,
+            \ 'remote': 'https://github.com/chemzqm/plug.nvim.git',
+            \ 'frozen': 0,
+            \ 'do': ''
+            \})
+    endif
+  endfor
+  if find == 0
+    echoerr '[plug.nvim] plug.nvim not found in runtimepath'
+  endif
+endfunction
+
+function! s:home()
+  if s:is_win
+    return $VIM."/vimfiles"
+  endif
+  return $HOME."/.vim"
+endfunction
+
+function! s:rm_rf(dir)
+  if isdirectory(a:dir)
+    call system((s:is_win ? 'rmdir /S /Q ' : 'rm -rf ') . shellescape(a:dir))
   endif
 endfunction
 
@@ -97,15 +149,9 @@ function! s:ChannelStatChanged(d, k, z)
   let s:on_load = []
 endfunction
 
-function! s:home()
-  if has('win32') || has ('win64')
-    return $VIM."/vimfiles"
-  endif
-  return $HOME."/.vim"
-endfunction
-
 if !has('nvim') | finish | endif
-" added by node
+
+" added from node
 call dictwatcheradd(g:, 'plug_nvim_node_channel', function('s:ChannelStatChanged'))
 
 function! plug#start()
