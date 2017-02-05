@@ -15,9 +15,7 @@ class Commands {
     this.shadow = config.shadow
     this.threads = config.threads
     this.timeout = config.timeout
-    this.plugins = config.plugins.filter(item => {
-      return !item.frozen
-    })
+    this.plugins = config.plugins
 
     this.useRebase = config.rebase && semver.gt(config.version, '2.9.0')
   }
@@ -62,7 +60,9 @@ class Commands {
       this.updateView(buf)
     }, 200)
     let self = this
-    let fns = this.plugins.map(plugin => {
+    let plugins = this.plugins.filter(o => !o.frozen)
+    this.total = plugins.length
+    let fns = plugins.map(plugin => {
       return function () {
         let o = self.status[plugin.directory] = {}
         o.revs = []
@@ -93,7 +93,7 @@ class Commands {
   updateView(buf) {
     let lines = []
     let dirs = Object.keys(this.status)
-    let total = this.plugins.length
+    let total = this.total
     let arr = []
     let stats = (new Array(total)).fill(' ')
     dirs.forEach((dir, i) => {
@@ -148,7 +148,7 @@ class Commands {
       })
       lines.unshift(`Install/Updating plugins ${succeed.length}/${total}`)
     }
-    lines.push('[' + stats.join('') + ']')
+    if (total > 1) lines.push('[' + stats.join('') + ']')
     lines.push('')
     lines = lines.concat(arr.reverse())
     this.nvim.bufSetLines(buf, 0, lines.length, false, lines, err => {
@@ -186,6 +186,7 @@ class Commands {
       this.updateView(buf)
     }, 200)
     this.updating = true
+    this.total = 1
     const start = Date.now()
     let plugin = this.plugins.find(plugin => plugin.name == name)
     if (!plugin) {

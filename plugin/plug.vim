@@ -10,15 +10,23 @@ command! -nargs=0 PlugClean :call plug#clean()
 function! s:SetDisplayView()
   setlocal filetype=plug
   setlocal buftype=nofile
-  setlocal bufhidden=wipe
   setlocal noswapfile
-  setlocal nobuflisted
   setlocal scrolloff=0
   exe 'nnoremap <buffer> <silent> D  :call <SID>ShowDiff()<cr>'
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
   exe 'nnoremap <buffer> <silent> L  :call <SID>ShowLog()<cr>'
-  exe 'nnoremap <buffer> <silent> q  :quit<cr>'
+  exe 'nnoremap <buffer> <silent> q  :call <SID>SmartQuit()<cr>'
   call s:syntax()
+endfunction
+
+function! s:SmartQuit()
+  let running = 0
+  if !running | bwipe | endif
+  if get(g:, 'plug_window', '') =~# 'edit'
+    bprevious!
+  else
+    close!
+  endif
 endfunction
 
 function! s:ListPlugins(...)

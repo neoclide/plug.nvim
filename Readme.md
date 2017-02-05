@@ -38,8 +38,8 @@ syntax on
 ## Variables
 
 * `g:plug_shadow`: use shadow clone(--depth=1) for git repos, set to `0` to disable it
-* `g:plug_threads`: the number of parallel threds for update/install, default to `8`
-* `g:plug_timeout`: timeout in seconds of one update/install command, default to `60`
+* `g:plug_threads`: the number of parallel threads for update/install, default to `8`
+* `g:plug_timeout`: timeout in seconds of each update/install command, default to `60`
 * `g:plug_window`: edit command for plug window, default to `10 split`
 * `g:plug_rebase`: use rebase (git pull --rebase --autostash) for update, default to `0`
 * `g:plug_url_format`: format string for git remote location, default: `git@github.com:%s.git`

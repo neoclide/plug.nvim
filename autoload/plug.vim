@@ -187,7 +187,7 @@ function! plug#update(...)
 endfunction
 
 function! s:Update(name)
-  exe g:plug_window.' plug://'.localtime()
+  exe 'keepalt '.g:plug_window.' plug://'.localtime()
   let nr = bufnr('%')
   wincmd p
   call rpcnotify(g:plug_nvim_node_channel, 'update', nr, a:name)
