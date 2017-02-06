@@ -15,6 +15,7 @@ function! s:SetDisplayView()
   exe 'nnoremap <buffer> <silent> D  :call <SID>ShowDiff()<cr>'
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
   exe 'nnoremap <buffer> <silent> L  :call <SID>ShowLog()<cr>'
+  exe 'nnoremap <buffer> <silent> V  :call <SID>OpenTerminal()<cr>'
   exe 'nnoremap <buffer> <silent> q  :call <SID>SmartQuit()<cr>'
   call s:syntax()
 endfunction
@@ -40,6 +41,18 @@ function! s:ShowGitLog()
     if plug.name == name
       exec 'lcd '.plug.directory
       exec 'Unite gitlog:all'
+    endif
+  endfor
+endfunction
+
+function! s:OpenTerminal()
+  let name = s:Getname()
+  if empty(name) | return | endif
+  for plug in plug#plugins()
+    if plug.name == name
+      belowright vs +enew
+      exe 'lcd '.plug.directory
+      execute 'terminal'
     endif
   endfor
 endfunction

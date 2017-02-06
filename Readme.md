@@ -50,6 +50,7 @@ syntax on
 * `q` quit current buffer
 * `L` show update/install log in preview window
 * `D` show latest update diff in preview window
+* `V` open terminal at split window of current plugin
 * `gl` run `Unite gitlog` in plugin directory, requires [unite-git-log](https://github.com/chemzqm/unite-git-log)
 
 ## Functions
