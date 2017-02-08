@@ -55,8 +55,10 @@ exports.queue = function (fns, count) {
 }
 
 exports.proc = function (process, timeout, onupdate) {
+  let out = false
   process.stdout.setEncoding('utf8')
   function onData(data) {
+    if (out) return
     let str = data.toString()
     let lines = str.split(/\r?\n/)
     lines.forEach(line => {
@@ -72,10 +74,14 @@ exports.proc = function (process, timeout, onupdate) {
   process.stdout.on('data', onData)
   return new Promise(function(resolve, reject) {
     let t = setTimeout(() => {
-      reject(new Error('process timeout after' + timeout + 's'))
-      process.kill()
+      out = true
+      process.kill('SIGKILL')
     }, timeout*1000)
-    process.on('close', code => {
+    process.on('error', err => {
+      reject(err)
+    })
+    process.on('exit', code => {
+      if (out) reject(new Error('Process timeout after ' + timeout + 's'))
       clearTimeout(t)
       if (code == 0) {
         resolve()

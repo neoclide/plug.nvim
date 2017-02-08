@@ -4,6 +4,7 @@ const path = require('path')
 const util = require('./util')
 const semver = require('semver')
 const Parallel = require('node-parallel')
+const Serial = require('node-serial')
 
 class Commands {
   constructor(nvim, config) {
@@ -64,7 +65,7 @@ class Commands {
     this.status = {}
     this.logs = {}
     if (this.updating) {
-      this.nvim.command('echoerr Plugin update in process')
+      this.nvim.command('echoerr Plugin update in process', () => {})
       return
     }
     let interval = setInterval(() => {
@@ -81,7 +82,7 @@ class Commands {
         return self.updatePlug(plugin).then(() => {
           o.stat = 'success'
         }, err => {
-          self.nvim.command(`echoerr Update error on ${plugin.name}` + err.message, () => { })
+          self.appendLog(plugin.directory, 'Error: ' + err.message)
           o.stat = 'fail'
         })
       }
@@ -153,11 +154,11 @@ class Commands {
       let fail = stats.filter(o => o == 'x').length
       lines.push('Cost:' + this.ellipse/1000 + 's Success:' + success + ' Fail:' + fail)
     } else {
-      const succeed = dirs.filter(dir => {
+      const completed = dirs.filter(dir => {
         let o = this.status[dir]
-        return o.stat == 'success'
+        return o.stat == 'success' || o.stat == 'fail'
       })
-      lines.unshift(`Install/Updating plugins ${succeed.length}/${total}`)
+      lines.unshift(`Install/Updating plugins ${completed.length}/${total}`)
     }
     if (total > 1) lines.push('[' + stats.join('') + ']')
     lines.push('')
@@ -173,14 +174,10 @@ class Commands {
       o.revs = {}
       if (res) {
         o.stat = 'updating'
-        return this.pull(plugin).catch(e => {
-          this.nvim.command(`echoerr [nvim.plug] update error of ${plugin.name} ${e.message}`)
-        })
+        return this.pull(plugin)
       }
       o.method = 'installing'
-      return this.clone(plugin).catch(e => {
-        this.nvim.command(`echoerr [nvim.plug] install error of ${plugin.name} ${e.message}`)
-      })
+      return this.clone(plugin)
     })
   }
   update(buf, name) {
@@ -251,25 +248,42 @@ class Commands {
     if (this.useRebase) args.push('--rebase', '--autostash')
     this.appendLog(directory, 'cd ' + directory)
     this.appendLog(directory, 'git ' + args.join(' '))
-    return util.getRevs(directory).then(rev => {
-      stat.revs.from = rev
+    const s = new Serial()
+    s.timeout(60000)
+    s.add(cb => {
+      util.getRevs(directory).then(rev => {
+        stat.revs.from = rev
+        cb()
+      }, cb)
+    })
+    s.add(cb => {
       const proc = spawn('git', args, {cwd: directory})
-      return util.proc(proc, this.timeout, line => {
+      util.proc(proc, this.timeout, line => {
         this.appendLog(directory, line)
-      }).then(() => {
-        return util.getRevs(directory).then(rev => {
-          stat.revs.to = rev
+      }).then(cb, cb)
+    })
+    s.add(cb => {
+      util.getRevs(directory).then(rev => {
+        stat.revs.to = rev
+        cb()
+      }, cb)
+    })
+    s.add(cb => {
+      if (!cmd) return cb()
+      let {from, to} = stat.revs
+      if (from == to) return cb()
+      this.appendLog(directory, cmd)
+      util.exec(cmd, directory).then(stdout => {
+        stdout.split(/\n/).forEach(line => {
+          this.appendLog(directory, line)
         })
-      }).then(() => {
-        let revs = stat.revs
-        this.appendLog(directory, cmd)
-        if (cmd && revs.to !== revs.from) {
-          return util.exec(cmd, directory).then(stdout => {
-            stdout.split(/\n/).forEach(line => {
-              this.appendLog(directory, line)
-            })
-          })
-        }
+        cb()
+      }, cb)
+    })
+    return new Promise((resolve, reject) => {
+      s.done(err => {
+        if (err) return reject(err)
+        resolve()
       })
     })
   }

@@ -42,15 +42,16 @@ syntax on
 * `g:plug_timeout`: timeout in seconds of each update/install command, default to `60`
 * `g:plug_window`: edit command for plug window, default to `10 split`
 * `g:plug_rebase`: use rebase (git pull --rebase --autostash) for update, default to `0`
-* `g:plug_url_format`: format string for git remote location, default: `git@github.com:%s.git`
+* `g:plug_url_format`: format string for git remote location, default:
+  `https://github.com/%s.git`
 * `g:plug_clean_command`: custom command for remove directory by `PlugClean`, default is `rm -rf` (or `rmdir` on windows)
 
 ## Keymaps
 
 * `q` quit current buffer
-* `L` show update/install log in preview window
-* `D` show latest update diff in preview window
-* `V` open terminal at split window of current plugin
+* `l` show update/install log in preview window
+* `d` show latest update diff in preview window
+* `v` open terminal at split window of current plugin
 * `gl` run `Unite gitlog` in plugin directory, requires [unite-git-log](https://github.com/chemzqm/unite-git-log)
 
 ## Functions

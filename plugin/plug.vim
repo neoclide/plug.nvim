@@ -12,10 +12,11 @@ function! s:SetDisplayView()
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal scrolloff=0
-  exe 'nnoremap <buffer> <silent> D  :call <SID>ShowDiff()<cr>'
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
-  exe 'nnoremap <buffer> <silent> L  :call <SID>ShowLog()<cr>'
-  exe 'nnoremap <buffer> <silent> V  :call <SID>OpenTerminal()<cr>'
+  exe 'nnoremap <buffer> <silent> d  :call <SID>ShowDiff()<cr>'
+  exe 'nnoremap <buffer> <silent> l  :call <SID>ShowLog()<cr>'
+  exe 'nnoremap <buffer> <silent> v  :call <SID>OpenTerminal()<cr>'
+  exe 'nnoremap <buffer> <silent> t  :call <SID>OpenItermTab()<cr>'
   exe 'nnoremap <buffer> <silent> q  :call <SID>SmartQuit()<cr>'
   call s:syntax()
 endfunction
@@ -30,7 +31,7 @@ function! s:SmartQuit()
 endfunction
 
 function! s:ListPlugins(...)
-  let plugins = map(copy(plug#plugins()), "get(v:val, 'name', 'wtf')")
+  let plugins = map(copy(plug#plugins()), "get(v:val, 'name', '')")
   return join(plugins, "\n")
 endfunction
 
@@ -69,7 +70,7 @@ function! s:syntax()
   syn match plugStar /^*/
   syn match plugSuccess /^✓/
   syn match plugFail /^✗/
-  syn match plugName /\(^✓ \)\@<=[^ ]*:/
+  syn match plugName /\(^\(✓\|✗\) \)\@<=[^ ]*:/
   syn match plugInstall /\(^+ \)\@<=[^:]*/
   syn match plugUpdate /\(^* \)\@<=[^:]*/
   hi def link plug1       Title
@@ -124,6 +125,39 @@ function! s:ResetPreview(buf)
   let height = getbufvar(a:buf, 'saved_pvh')
   if height
     exe 'set pvh='.height
+  endif
+endfunction
+
+function! s:OpenItermTab()
+  let name = s:Getname()
+  if empty(name) | return | endif
+  for plug in plug#plugins()
+    if plug.name == name
+      call s:osascript(
+          \ 'tell application "iTerm2"',
+          \   'tell current window',
+          \     'create tab with default profile',
+          \     'tell current session',
+          \       'delay 0.1',
+          \       'write text "cd '.s:escape(plug.directory).'"',
+          \       'write text "clear"',
+          \     'end tell',
+          \   'end tell',
+          \ 'end tell')
+    endif
+  endfor
+endfunction
+
+function! s:escape(filepath)
+  return "'".substitute(a:filepath, "'", "\\'", 'g')."'"
+endfunction
+
+function! s:osascript(...) abort
+  let args = join(map(copy(a:000), '" -e ".shellescape(v:val)'), '')
+  let output = system('osascript'. args)
+  if v:shell_error && output !=# ""
+    echohl Error | echon output | echohl None
+    return
   endif
 endfunction
 
