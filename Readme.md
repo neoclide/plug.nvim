@@ -2,6 +2,11 @@
 
 None block plugin manager using neovim job-control feature.
 
+## TODO
+
+* Implemention for retry.
+* Show branch name if not master after update.
+
 ## Features
 
 * Async and run git commands in parallel
@@ -52,6 +57,7 @@ syntax on
 * `l` show update/install log in preview window
 * `d` show latest update diff in preview window
 * `v` open terminal at split window of current plugin
+* `t` open iterm2 with new tab at root of current plugin
 * `gl` run `Unite gitlog` in plugin directory, requires [unite-git-log](https://github.com/chemzqm/unite-git-log)
 
 ## Functions
