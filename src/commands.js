@@ -134,7 +134,7 @@ class Commands {
         if (!o.revs.from) {
           buf += ' Installed'
         } else if (o.revs.from == o.revs.to) {
-          buf += ' No change'
+          buf += ' Already up-to-date.'
         } else {
           buf += ` Updated [${o.revs.from.slice(0,8)} - ${o.revs.to.slice(0,8)}]`
         }
