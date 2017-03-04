@@ -5,7 +5,6 @@ None block plugin manager using neovim job-control feature.
 ## TODO
 
 * Implemention for retry.
-* Show branch name if not master after update.
 
 ## Features
 

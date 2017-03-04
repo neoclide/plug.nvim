@@ -18,6 +18,23 @@ exports.getRevs = function (directory) {
   })
 }
 
+exports.getBranch = function (directory) {
+  return new Promise(function(resolve, reject) {
+    exec('git symbolic-ref -q HEAD',
+      {cwd: directory}, function (err, stdout) {
+        if (err) return reject(err);
+        let str = stdout.replace('\n', '').slice(11)
+        if (str) return resolve(str)
+        exec('git rev-parse --short HEAD | cut -c 2-',
+          {cwd: directory},
+          function (err, stdout) {
+          if (err) return reject(err)
+          resolve(stdout.replace(/\n$/, ''))
+        })
+    })
+  })
+}
+
 exports.exec = function (cmd, cwd) {
   return new Promise(resolve => {
     exec(cmd, {cwd: cwd}, (err, stdout) => {

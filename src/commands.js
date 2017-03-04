@@ -130,7 +130,9 @@ class Commands {
           buf += '✗ '
           break
       }
-      buf += path.basename(dir) + ':'
+      buf += path.basename(dir)
+      if (o.branch) buf += ' [' + o.branch + ']'
+      buf += ':'
       if (o.revs.to) {
         if (!o.revs.from) {
           buf += ' Installed'
@@ -240,6 +242,10 @@ class Commands {
         stat.revs.to = rev
       })
     }).then(() => {
+      return util.getBranch(directory).then(branch => {
+        stat.branch = branch
+      })
+    }).then(() => {
       return new Promise((resolve, reject) => {
         this.updateSubmodule(directory, 'init', err => {
           if (err) return reject(err)
@@ -263,6 +269,12 @@ class Commands {
         stat.revs.from = rev
         cb()
       }, cb)
+    })
+    s.add(cb => {
+      util.getBranch(directory).then(branch => {
+        stat.branch = branch
+        cb()
+      })
     })
     s.add(cb => {
       const proc = spawn('git', args, {cwd: directory})
