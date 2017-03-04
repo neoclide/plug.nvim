@@ -17,7 +17,8 @@ None block plugin manager using neovim job-control feature.
 
 ## Install
 
-[Node.js](https://nodejs.org/en/) is required, after node installed, run command
+[Node.js](https://nodejs.org/en/) is required, after node installed, run command, Node version > 6.9.0 is required.
+
 like:
 
 ```

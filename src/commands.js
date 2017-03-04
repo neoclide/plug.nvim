@@ -5,6 +5,7 @@ const util = require('./util')
 const semver = require('semver')
 const Parallel = require('node-parallel')
 const Serial = require('node-serial')
+const fs = require('fs')
 
 class Commands {
   constructor(nvim, config) {
@@ -238,6 +239,13 @@ class Commands {
       return util.getRevs(directory).then(rev => {
         stat.revs.to = rev
       })
+    }).then(() => {
+      return new Promise((resolve, reject) => {
+        this.updateSubmodule(directory, 'init', err => {
+          if (err) return reject(err)
+          resolve()
+        })
+      })
     })
   }
   pull(plugin) {
@@ -267,6 +275,9 @@ class Commands {
         stat.revs.to = rev
         cb()
       }, cb)
+    })
+    s.add(cb => {
+      this.updateSubmodule(directory, 'update', cb)
     })
     s.add(cb => {
       if (!cmd) return cb()
@@ -337,6 +348,15 @@ class Commands {
       this.nvim.bufSetLines(buf, 0, msgs.length, false, msgs, err => {
         if (err) console.error(err.message)
       })
+    })
+  }
+  updateSubmodule(directory, method, cb) {
+    fs.access(path.join(directory, '.gitmodules'), fs.W_OK, err => {
+      if (err) return cb()
+      let proc = spawn('git', ['submodule', method], {cwd: directory})
+      util.proc(proc, this.timeout, line => {
+        this.appendLog(directory, line)
+      }).then(cb, cb)
     })
   }
 }
