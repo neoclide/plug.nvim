@@ -41,7 +41,7 @@ function! s:ShowGitLog()
   for plug in plug#plugins()
     if plug.name == name
       exec 'lcd '.plug.directory
-      exec 'Unite gitlog:all'
+      exec 'Denite gitlog:all'
     endif
   endfor
 endfunction

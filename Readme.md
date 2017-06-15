@@ -57,7 +57,7 @@ syntax on
 * `d` show latest update diff in preview window
 * `v` open terminal at split window of current plugin
 * `t` open iterm2 with new tab at root of current plugin
-* `gl` run `Unite gitlog` in plugin directory, requires [unite-git-log](https://github.com/chemzqm/unite-git-log)
+* `gl` run `Denite gitlog` in plugin directory, requires [denite-extra](https://github.com/chemzqm/denite-extra)
 
 ## Functions
 
