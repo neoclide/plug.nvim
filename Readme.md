@@ -2,10 +2,6 @@
 
 None block plugin manager using neovim job-control feature.
 
-## TODO
-
-* Implemention for retry.
-
 ## Features
 
 * Async and run git commands in parallel
@@ -13,11 +9,12 @@ None block plugin manager using neovim job-control feature.
 * High performance for speedup (no remote host)
 * Run `UpdateRemotePlugins` command and generate helptags when necessary
 * No cache, no magic
+* Unlike [vim-plug](https://github.com/junegunn/vim-plug), always manage update
+  of itself.
 
 ## Install
 
-[Node.js](https://nodejs.org/en/) is required, after node installed, run command, Node version > 6.9.0 is required.
-
+[Node.js](https://nodejs.org/en/) is required, after node installed, run command
 like:
 
 ```
@@ -25,6 +22,8 @@ git clone https://github.com/chemzqm/plug.nvim.git ~/.vim/bundle
 cd ~/.vim/bundle/plug.nvim
 npm install
 ```
+
+Node version > 6.9.0 is required.
 
 ## Usage
 
@@ -78,7 +77,7 @@ A function that should be called after all Plug command.
 
 Plug.nvim only support install plugins from **github**.
 
-`option` is a viml dictionary, it could contains following: 
+`option` is a vim dictionary, it could contain following fields: 
 
 * `dir` custom parent directory for this plugin
 * `frozen` not run update or install for this plugin when is `1`
@@ -99,6 +98,11 @@ Update/install a specific plugin, use `tab` to complete name.
 
 Helper command for clean unused plugin inside the root directory, prompt is used
 before actually remove the directory
+
+## TODO
+
+* Retry for selected plugin(s)
+* Custom autocmd for update start/end
 
 ## LICENSE
 
