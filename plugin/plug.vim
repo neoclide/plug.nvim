@@ -114,7 +114,7 @@ endfunction
 
 function! s:Getname()
   let line = getline('.')
-  let ms = matchlist(line, '\v^.\s([^:]+)')
+  let ms = matchlist(line, '\v^.\s(\S+)')
   if len(ms)
     return ms[1]
   endif
