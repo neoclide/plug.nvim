@@ -102,7 +102,6 @@ before actually remove the directory
 ## TODO
 
 * Retry for selected plugin(s)
-* Custom autocmd for update start/end
 
 ## LICENSE
 

@@ -2,9 +2,6 @@ const exec = require('child_process').exec
 const fs = require('fs')
 const path = require('path')
 
-exports.debug = function (msg) {
-  fs.appendFileSync('/Users/chemzqm/.debug', msg + '\n') }
-
 exports.setLines = function (nvim, buf, lines, cb) {
   nvim.bufSetLines(buf, 0, lines.length, lines, cb)
 }

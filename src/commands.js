@@ -7,7 +7,7 @@ const Parallel = require('node-parallel')
 const Serial = require('node-serial')
 const fs = require('fs')
 
-class Commands {
+export default class Commands {
   constructor(nvim, config) {
     this.nvim = nvim
     this.config = config
@@ -27,12 +27,14 @@ class Commands {
         return updating
       },
       set: val => {
-        this.nvim.command(`let g:plug_updating=${val ? 1 : 0}`, () => { })
         updating = val
+        this.nvim.command(`let g:plug_updating=${val ? 1 : 0}`).catch(err => {
+          console.error(err)
+        })
       }
     })
   }
-  updateRemote() {
+  updateRemotePlugins() {
     let stats = this.status
     let dirs = []
     Object.keys(stats).forEach(key => {
@@ -47,7 +49,7 @@ class Commands {
       p.add(done => {
         let docRoot = path.join(dir, 'doc')
         util.isDirectory(docRoot).then(res => {
-          if (res) this.nvim.command(`helptags ${docRoot}`, () => {})
+          if (res) this.nvim.command(`helptags ${docRoot}`).catch(() => {})
         }).then(() => {
           util.isRemote(dir).then(res => {
             if (res) shouldUpdate = true
@@ -58,7 +60,7 @@ class Commands {
     })
     p.done(() => {
       if (shouldUpdate) {
-        this.nvim.command('UpdateRemotePlugins', () => {})
+        this.nvim.command('UpdateRemotePlugins').catch(() => {})
       }
     })
   }
@@ -66,7 +68,7 @@ class Commands {
     this.status = {}
     this.logs = {}
     if (this.updating) {
-      this.nvim.command('echoerr Plugin update in process', () => {})
+      this.nvim.command('echoerr Plugin update in process').catch(() => {})
       return
     }
     let interval = setInterval(() => {
@@ -91,19 +93,19 @@ class Commands {
     this.updating = true
     const start = Date.now()
     util.queue(fns, this.threads).then(() => {
+      clearInterval(interval)
       this.updating = false
       this.ellipse = Date.now() - start
       this.updateView(buf)
-      this.updateRemote()
-      clearInterval(interval)
+      this.updateRemotePlugins()
     }, err => {
-      this.updating = false
-      self.nvim.command('echoerr ' + err.message, () => { })
       clearInterval(interval)
+      this.updating = false
+      this.nvim.command('echoerr ' + err.message).catch(() => {})
       process.exit(1)
     })
   }
-  updateView(buf) {
+  updateView(bufnr) {
     let lines = []
     let dirs = Object.keys(this.status)
     let total = this.total
@@ -164,14 +166,17 @@ class Commands {
       lines.unshift(`Install/Updating plugins ${completed.length}/${total}`)
     }
     if (total > 1) lines.push('[' + stats.join('') + ']')
+    lines.push('d -> diff | l -> log | t -> item tab | q -> quit')
     lines.push('')
     lines = lines.concat(arr.reverse())
-    this.nvim.bufSetLines(buf, 0, lines.length, false, lines, err => {
-      if (err) console.error(err.message)
+    this.nvim.request('nvim_buf_set_lines', [bufnr, 0, lines.length, false, lines]).catch(err => {
+      console.error(err.message)
     })
   }
   updatePlug(plugin) {
-    const {directory} = plugin
+    const {directory, name} = plugin
+    let file = path.resolve(__dirname, '../log', name + '.log')
+    fs.unlink(file, () => { })
     return util.isDirectory(directory).then(res => {
       let o = this.status[plugin.directory]
       o.revs = {}
@@ -206,8 +211,8 @@ class Commands {
       o.stat = 'success'
       this.updating = false
       this.ellipse = Date.now() - start
+      this.updateRemotePlugins()
       this.updateView(buf)
-      this.updateRemote()
       clearInterval(interval)
     }, err => {
       self.nvim.command(`echoerr Update error on ${plugin.name}` + err.message, () => { })
@@ -315,6 +320,13 @@ class Commands {
     let list = this.logs[dir] || []
     list.push(line)
     this.logs[dir] = list
+    let name = path.basename(dir)
+    let file = path.resolve(__dirname, '../log', name + '.log')
+    fs.appendFile(file, line + '\n', 'utf8', err => {
+      if (err) {
+        console.error(err)
+      }
+    })
   }
   showLog(buf, name) {
     let plugin = this.plugins.find(o => {
@@ -324,29 +336,23 @@ class Commands {
       this.nvim.command(`echoerr Plugin ${name} not found`, () => { })
       return
     }
-    let msgs = this.logs[plugin.directory]
-    this.nvim.bufSetLines(buf, 0, msgs.length, false, msgs, err => {
-      if (err) console.error(err.message)
+    let file = path.resolve(__dirname, '../log', name + '.log')
+    exec(`cat ${file}`, (err, stdout) => {
+      if (err) return console.error(err)
+      let lines = stdout.split('\n')
+      this.nvim.request('nvim_buf_set_lines', [buf, 0, lines.length, false, lines]).catch(err => {
+        console.error(err.message)
+      })
     })
   }
   diff(buf, name) {
-    let plugin = this.plugins.find(o => {
-      return path.basename(o.directory) == name
-    })
+    let plugin = this.plugins.find(o => o.name == name)
     if (!plugin) {
-      this.nvim.command(`echoerr Plugin ${name} not found`, () => {
-        this.nvim.command('pclose', () => {})
-      })
+      this.nvim.command(`echoerr 'Plugin ${name} not found'`)
       return
     }
     let o = this.status[plugin.directory]
-    if (!o || !o.revs.to || o.revs.to == o.revs.from) {
-      this.nvim.command(`echoerr no changes of ${name}`, () => {
-        this.nvim.command('pclose', () => { })
-      })
-      return
-    }
-    this.nvim.command('lcd ' + plugin.directory, () => {})
+    if (!o || !o.revs.to) return
     let msgs = []
     let revs = o.revs
     exec(`git --no-pager diff --no-color ${revs.from} ${revs.to}`, {
@@ -357,8 +363,8 @@ class Commands {
       } else {
         msgs = stdout.split(/\r?\n/)
       }
-      this.nvim.bufSetLines(buf, 0, msgs.length, false, msgs, err => {
-        if (err) console.error(err.message)
+      this.nvim.request('nvim_buf_set_lines', [buf, 0, msgs.length, false, msgs]).catch(err => {
+        console.error(err.message)
       })
     })
   }
@@ -372,5 +378,3 @@ class Commands {
     })
   }
 }
-
-module.exports = Commands

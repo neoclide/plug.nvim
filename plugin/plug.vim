@@ -4,8 +4,7 @@ if exists('did_plug_loaded')
 endif
 let did_plug_loaded = 1
 
-command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call plug#update(<f-args>)
-command! -nargs=0 PlugClean :call plug#clean()
+command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call PlugUpdate(<f-args>)
 
 function! s:SetDisplayView()
   setlocal filetype=plug
@@ -13,9 +12,8 @@ function! s:SetDisplayView()
   setlocal noswapfile
   setlocal scrolloff=0
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
-  exe 'nnoremap <buffer> <silent> d  :call <SID>ShowDiff()<cr>'
-  exe 'nnoremap <buffer> <silent> l  :call <SID>ShowLog()<cr>'
-  exe 'nnoremap <buffer> <silent> v  :call <SID>OpenTerminal()<cr>'
+  exe 'nnoremap <buffer> <silent> d  :call <SID>DoAction("diff")<cr>'
+  exe 'nnoremap <buffer> <silent> l  :call <SID>DoAction("log")<cr>'
   exe 'nnoremap <buffer> <silent> t  :call <SID>OpenItermTab()<cr>'
   exe 'nnoremap <buffer> <silent> q  :call <SID>SmartQuit()<cr>'
   call s:syntax()
@@ -44,19 +42,7 @@ function! s:ShowGitLog()
       exec 'Denite gitlog:all'
     endif
   endfor
-endfunction
-
-function! s:OpenTerminal()
-  let name = s:Getname()
-  if empty(name) | return | endif
-  for plug in plug#plugins()
-    if plug.name == name
-      belowright vs +enew
-      exe 'lcd '.plug.directory
-      execute 'terminal'
-    endif
-  endfor
-endfunction
+endfunction 
 
 function! s:syntax()
   syntax clear
@@ -100,16 +86,16 @@ function! s:SetLogView()
   exe 'nnoremap <buffer> <silent> q :quit<cr>'
 endfunction
 
-function! s:ShowDiff()
+function! s:DoAction(type)
   let name = s:Getname()
   if empty(name) | return | endif
-  call plug#diff(name)
-endfunction
-
-function! s:ShowLog()
-  let name = s:Getname()
-  if empty(name) | return | endif
-  call plug#log(name)
+  echo name
+  let bufnr = plug#open_preview(a:type, name)
+  if a:type == 'diff'
+    call PlugDiff(bufnr, name)
+  elseif a:type == 'log'
+    call PlugLog(bufnr, name)
+  endif
 endfunction
 
 function! s:Getname()
@@ -163,7 +149,6 @@ endfunction
 
 augroup plug
   autocmd!
-  autocmd VimEnter * if get(g:, 'plug_nvim_autoload', 1) == 0 | call plug#start() | endif
   autocmd BufNewFile plug://[0-9]*  :call s:SetDisplayView()
   autocmd BufNewFile plug://diff_*  :call s:SetDiffView()
   autocmd BufNewFile plug://log_*   :call s:SetLogView()
