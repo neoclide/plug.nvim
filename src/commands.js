@@ -68,7 +68,7 @@ export default class Commands {
     this.status = {}
     this.logs = {}
     if (this.updating) {
-      this.nvim.command('echoerr Plugin update in process').catch(() => {})
+      this.showErrorMsg('Plugin update in process')
       return
     }
     let interval = setInterval(() => {
@@ -101,7 +101,7 @@ export default class Commands {
     }, err => {
       clearInterval(interval)
       this.updating = false
-      this.nvim.command('echoerr ' + err.message).catch(() => {})
+      this.showErrorMsg(err.message)
       process.exit(1)
     })
   }
@@ -166,8 +166,7 @@ export default class Commands {
       lines.unshift(`Install/Updating plugins ${completed.length}/${total}`)
     }
     if (total > 1) lines.push('[' + stats.join('') + ']')
-    lines.push('d -> diff | l -> log | t -> item tab | q -> quit')
-    lines.push('')
+    lines.push('r -> retry | d -> diff | l -> log | t -> item tab | q -> quit')
     lines = lines.concat(arr.reverse())
     this.nvim.request('nvim_buf_set_lines', [bufnr, 0, lines.length, false, lines]).catch(err => {
       console.error(err.message)
@@ -188,22 +187,27 @@ export default class Commands {
       return this.clone(plugin)
     })
   }
-  update(buf, name) {
-    this.status = {}
-    this.logs = {}
+  showErrorMsg(msg) {
+    this.nvim.command(`echoerr '${msg}'`).catch(() => {})
+  }
+  update(buf, name, isRetry) {
     if (this.updating) {
-      this.nvim.command('echoerr Plugin update in process')
+      this.showErrorMsg('Plugin update in process')
       return
+    }
+    if (!isRetry) {
+      this.status = {}
+      this.logs = {}
+      this.total = 1
     }
     let interval = setInterval(() => {
       this.updateView(buf)
     }, 200)
     this.updating = true
-    this.total = 1
     const start = Date.now()
     let plugin = this.plugins.find(plugin => plugin.name == name)
     if (!plugin) {
-      this.nvim.command(`echoerr Plugin ${name} not found`)
+      this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
     let o = this.status[plugin.directory] = {}
@@ -215,7 +219,7 @@ export default class Commands {
       this.updateView(buf)
       clearInterval(interval)
     }, err => {
-      self.nvim.command(`echoerr Update error on ${plugin.name}` + err.message, () => { })
+      this.showErrorMsg(`Update error on ${plugin.name}: ${err.message}`)
       o.stat = 'fail'
       this.updating = false
       clearInterval(interval)
@@ -345,7 +349,7 @@ export default class Commands {
       return path.basename(o.directory) == name
     })
     if (!plugin) {
-      this.nvim.command(`echoerr Plugin ${name} not found`, () => { })
+      this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
     let file = path.resolve(__dirname, '../log', name + '.log')
@@ -360,7 +364,7 @@ export default class Commands {
   diff(buf, name) {
     let plugin = this.plugins.find(o => o.name == name)
     if (!plugin) {
-      this.nvim.command(`echoerr 'Plugin ${name} not found'`)
+      this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
     let o = this.status[plugin.directory]

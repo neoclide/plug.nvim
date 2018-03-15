@@ -12,6 +12,7 @@ function! s:SetDisplayView()
   setlocal noswapfile
   setlocal scrolloff=0
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
+  exe 'nnoremap <buffer> <silent> r  :call <SID>DoAction("retry")<cr>'
   exe 'nnoremap <buffer> <silent> d  :call <SID>DoAction("diff")<cr>'
   exe 'nnoremap <buffer> <silent> l  :call <SID>DoAction("log")<cr>'
   exe 'nnoremap <buffer> <silent> t  :call <SID>OpenItermTab()<cr>'
@@ -89,7 +90,10 @@ endfunction
 function! s:DoAction(type)
   let name = s:Getname()
   if empty(name) | return | endif
-  echo name
+  if a:type == 'retry'
+    call PlugRetry(name)
+    return
+  endif
   let bufnr = plug#open_preview(a:type, name)
   if a:type == 'diff'
     call PlugDiff(bufnr, name)

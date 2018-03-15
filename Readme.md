@@ -1,12 +1,12 @@
 # Plug.nvim
 
-None block plugin manager using neovim job-control feature.
+None block plugin manager using neovim remote plugin feature.
+Could works for vim (without commands support).
 
 ## Features
 
 * Async and run git commands in parallel
 * Quick remap for view update logs and diffs
-* High performance for speedup (no remote host)
 * Run `UpdateRemotePlugins` command and generate helptags when necessary
 * No cache, no magic
 * Unlike [vim-plug](https://github.com/junegunn/vim-plug), always manage update
@@ -52,12 +52,12 @@ syntax on
 
 ## Keymaps
 
+* `r` retry update of underline plugin
 * `q` quit current buffer
-* `l` show update/install log in preview window
-* `d` show latest update diff in preview window
-* `v` open terminal at split window of current plugin
-* `t` open iterm2 with new tab at root of current plugin
-* `gl` run `Denite gitlog` in plugin directory, requires [denite-extra](https://github.com/chemzqm/denite-extra)
+* `l` show update/install log of underline plugin in preview window
+* `d` show latest update diff of underline plugin in preview window
+* `t` open iterm2 with new tab at root of underline plugin
+* `gl` run `Denite gitlog` in plugin directory, requires [denite-git](https://github.com/neoclide/denite-git)
 
 ## Functions
 
@@ -91,18 +91,17 @@ Plug.nvim only support install plugins from **github**.
 
 Update/install all plugins.
 
-### `PlugUpdate [name]`
+### `PlugUpdate [plugin]`
 
-Update/install a specific plugin, use `tab` to complete name.
+Update/install a specific plugin, use `tab` to complete plugin name.
 
-### `PlugClean`
+### `PlugRemove [plugin]`
 
-Helper command for clean unused plugin inside the root directory, prompt is used
-before actually remove the directory
+Remove plugin folder to trash.
 
-## TODO
+### `Denite vim`
 
-* Retry for selected plugin(s)
+Open denite source for vim.  Support `tabopen` `update` `delete` action.
 
 ## LICENSE
 

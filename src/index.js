@@ -35,6 +35,14 @@ export default class Plug {
     }
   }
 
+  @Function('PlugRetry', { sync: false })
+  async plugRetry(args) {
+    let name = args[0]
+    if (!name || !command) return
+    let nr = await this.nvim.eval('bufnr("%")')
+    command.update(nr, name, true)
+  }
+
   @Command('PlugCheck', {
     sync: true,
   })
@@ -43,7 +51,7 @@ export default class Plug {
     for (let plug of plugins) {
       let stat = await pify(fs.stat)(plug.directory)
       if (!stat.isDirectory()) {
-        await this.nvim.command('echoerr ' + plug.directory + ' not exists!')
+        await this.nvim.command(`echoerr '${plug.directory} not exists!'`)
       }
     }
   }
