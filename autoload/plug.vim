@@ -1,7 +1,6 @@
 let g:plug_shadow = get(g:, 'plug_shadow', 1)
 let g:plug_threads = get(g:, 'plug_threads', 8)
-let g:plug_timeout = get(g:, 'plug_timeout', 60)
-let g:plug_window = get(g:, 'plug_window', '10 split')
+let g:plug_timeout = get(g:, 'plug_timeout', 30)
 let g:plug_rebase = get(g:, 'plug_rebase', 0)
 let g:plug_url_format = get(g:, 'plug_url_format', 'https://github.com/%s.git')
 

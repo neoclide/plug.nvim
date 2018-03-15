@@ -22,11 +22,7 @@ endfunction
 
 function! s:SmartQuit()
   if !get(g:, 'plug_updating', 0) | bwipe | endif
-  if get(g:, 'plug_window', '') =~# 'edit'
-    bprevious!
-  else
-    close!
-  endif
+  close!
 endfunction
 
 function! s:ListPlugins(...)
