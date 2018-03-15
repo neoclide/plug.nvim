@@ -50,7 +50,7 @@ export default class Plug {
 
   @Command('PlugRemove', {
     sync: false,
-    args: '*'
+    nargs: '*'
   })
   async plugRemove(args) {
     let plugins = await this.nvim.call('plug#plugins', [])

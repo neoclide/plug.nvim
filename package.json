@@ -7,8 +7,8 @@
     "node": ">9.0"
   },
   "scripts": {
-    "build": "babel -d lib src",
-    "watch": "babel -wd lib src"
+    "watch": "babel -wd lib src",
+    "build": "babel -d lib src"
   },
   "author": "chemzqm@gmail.com",
   "license": "MIT",
