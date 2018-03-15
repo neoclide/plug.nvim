@@ -23,7 +23,13 @@ cd ~/.vim/bundle/plug.nvim
 npm install
 ```
 
-Node version > 6.9.0 is required.
+Then open vim and run:
+
+```
+:UpdateRemotePlugins
+```
+
+Node version > 9.0.0 is required.
 
 ## Usage
 
