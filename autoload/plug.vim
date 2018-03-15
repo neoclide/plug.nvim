@@ -26,11 +26,12 @@ function! plug#add(name, ...) abort
   let name = get(opts, 'as', matchstr(a:name, '[^\/]\+$'))
   let root = get(opts, 'dir', s:plug_root)
   let remote = printf(g:plug_url_format, a:name)
-
+  let dest = get(opts, 'branch', get(opts, 'tag', get(opts, 'commit', '')))
   let item = {
       \ 'name': name,
       \ 'directory': root.'/'.name,
       \ 'remote': remote,
+      \ 'dest': dest,
       \ 'frozen': get(opts, 'frozen', 0),
       \ 'do': get(opts, 'do', ''),
       \}

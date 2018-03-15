@@ -1,5 +1,5 @@
 cd /Users/chemzqm/.vim/bundle/vim-stay
 git pull https://github.com/kopischke/vim-stay.git --progress --stat --rebase --autostash
-From https://github.com/kopischke/vim-stay
  * branch            HEAD       -> FETCH_HEAD
+From https://github.com/kopischke/vim-stay
 Current branch master is up to date.

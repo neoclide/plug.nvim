@@ -79,10 +79,11 @@ Plug.nvim only support install plugins from **github**.
 
 `option` is a vim dictionary, it could contain following fields: 
 
+* `as` specify an alias name for plugin folder to avoid conflict
 * `dir` custom parent directory for this plugin
 * `frozen` not run update or install for this plugin when is `1`
-* `do` command that would be run in plugin folder after install/update
-* `as` specify an alias name for plugin folder to avoid conflict
+* `do` shell command that would be run in plugin folder after install/update
+* `branch/tag/commit` Branch/tag/commit of the repository to use
 
 **Notice** no lazyload stuff would be available, it's useless for neovim.
 

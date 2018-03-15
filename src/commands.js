@@ -222,7 +222,7 @@ export default class Commands {
     })
   }
   clone(plugin) {
-    const {remote, name, directory} = plugin
+    const {remote, name, directory, dest} = plugin
     const cmd = plugin['do']
     const stat = this.status[directory]
     const cwd = path.dirname(plugin.directory)
@@ -230,8 +230,7 @@ export default class Commands {
     if (this.shadow) args.push('--depth=1', '--shallow-submodules')
     this.appendLog(directory, 'cd ' + cwd)
     this.appendLog(directory, 'git ' + args.join(' '))
-    const process = spawn('git', args, {cwd: cwd})
-    return util.proc(process, this.timeout, line => {
+    return util.proc(spawn('git', args, {cwd: cwd}), this.timeout, line => {
       this.appendLog(directory, line)
     }).then(() => {
       if (cmd) {
@@ -241,6 +240,12 @@ export default class Commands {
             this.appendLog(directory, line)
           })
         })
+      }
+    }).then(() => {
+      if (dest) {
+        return util.proc(spawn('git', ['checkout', dest], {cwd: cwd}, this.timeout, line => {
+          this.appendLog(directory, line)
+        }))
       }
     }).then(() => {
       return util.getRevs(directory).then(rev => {
@@ -260,7 +265,7 @@ export default class Commands {
     })
   }
   pull(plugin) {
-    const {remote, directory} = plugin
+    const {remote, directory, dest} = plugin
     const cmd = plugin['do']
     const stat = this.status[directory]
     const args = ['pull', remote, '--progress', '--stat']
@@ -276,16 +281,23 @@ export default class Commands {
       }, cb)
     })
     s.add(cb => {
-      util.getBranch(directory).then(branch => {
-        stat.branch = branch
-        cb()
-      })
-    })
-    s.add(cb => {
       const proc = spawn('git', args, {cwd: directory})
       util.proc(proc, this.timeout, line => {
         this.appendLog(directory, line)
       }).then(cb, cb)
+    })
+    s.add(cb => {
+      if (!dest) return cb()
+      const proc = spawn('git', ['checkout', dest], {cwd: directory})
+      util.proc(proc, this.timeout, line => {
+        this.appendLog(directory, line)
+      }).then(cb, cb)
+    })
+    s.add(cb => {
+      util.getBranch(directory).then(branch => {
+        stat.branch = branch
+        cb()
+      })
     })
     s.add(cb => {
       util.getRevs(directory).then(rev => {
