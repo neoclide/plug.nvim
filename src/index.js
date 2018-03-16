@@ -7,7 +7,7 @@ const exec = require('child_process').exec
 let opts = {}
 let command = null
 
-@Plugin({ dev: true })
+@Plugin({ dev: !!process.env.NVIM_NODE_HOST_DEBUG })
 export default class Plug {
 
   async initCommand() {
