@@ -36,7 +36,6 @@ class Source(Base):
     def gather_candidates(self, context):
         homepath = os.path.expanduser('~')
         candidates = []
-        print('a')
         for plug in context['__plugins']:
             mtime = os.stat(plug['directory']).st_mtime
             candidates.append({
