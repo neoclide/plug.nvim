@@ -3,9 +3,12 @@
 [![](http://img.shields.io/github/issues/neoclide/plug.nvim.svg)](https://github.com/neoclide/plug.nvim/issues)
 [![](http://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+![2018-04-03 18_14_46](https://user-images.githubusercontent.com/251450/38243892-84d95fce-376b-11e8-90a9-573decb1c481.gif)
+
 None block plugin manager using neovim remote plugin feature.
 
 Could works for vim (without commands support).
+
 
 ## Features
 
