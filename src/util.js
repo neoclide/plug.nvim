@@ -98,7 +98,9 @@ exports.proc = function (process, timeout, onupdate) {
       if (out) reject(new Error('Process timeout after ' + timeout + 's'))
       clearTimeout(t)
       if (code == 0) {
-        resolve()
+        setTimeout(() => {
+          resolve()
+        }, 100)
       } else {
         reject(new Error('process exit with ' + code))
       }

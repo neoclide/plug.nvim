@@ -188,7 +188,21 @@ export default class Commands {
     })
   }
   showErrorMsg(msg) {
-    this.nvim.command(`echoerr '${msg}'`).catch(() => {})
+    this.nvim.command(`echoerr '${msg.replace(/'/g, "''")}'`).catch(() => {
+      console.error(msg)
+    })
+  }
+  install(buf, repo) {
+    let name = repo.replace(/^[^/]+\//, '')
+    this.plugins = [{
+      name,
+      directory: path.join(process.env.HOME, `.vim/bundle/${name}`),
+      remote: `https://github.com/${repo}.git`,
+      dest: 'master',
+      frozen: 0,
+      do: ''
+    }]
+    this.update(buf, name, false)
   }
   update(buf, name, isRetry) {
     if (this.updating) {
@@ -221,7 +235,9 @@ export default class Commands {
     }, err => {
       this.showErrorMsg(`Update error on ${plugin.name}: ${err.message}`)
       o.stat = 'fail'
+      this.ellipse = Date.now() - start
       this.updating = false
+      this.updateView(buf)
       clearInterval(interval)
     })
   }
@@ -234,7 +250,8 @@ export default class Commands {
     if (this.shadow) args.push('--depth=1', '--shallow-submodules')
     this.appendLog(directory, 'cd ' + cwd)
     this.appendLog(directory, 'git ' + args.join(' '))
-    return util.proc(spawn('git', args, {cwd: cwd}), this.timeout, line => {
+    let {timeout} = this
+    return util.proc(spawn('git', args, {cwd: cwd}), timeout, line => {
       this.appendLog(directory, line)
     }).then(() => {
       if (cmd) {
@@ -247,9 +264,14 @@ export default class Commands {
       }
     }).then(() => {
       if (dest) {
-        return util.proc(spawn('git', ['checkout', dest], {cwd: cwd}, this.timeout, line => {
-          this.appendLog(directory, line)
-        }))
+        return util.exec(`git checkout ${dest}`, cwd).then((stdout, stderr) => {
+          stderr.split(/\n/).forEach(line => {
+            this.appendLog(directory, line)
+          })
+          stdout.split(/\n/).forEach(line => {
+            this.appendLog(directory, line)
+          })
+        })
       }
     }).then(() => {
       return util.getRevs(directory).then(rev => {
@@ -266,6 +288,8 @@ export default class Commands {
           resolve()
         })
       })
+    }).catch(err => {
+      this.appendLog(err.message)
     })
   }
   pull(plugin) {
@@ -345,15 +369,13 @@ export default class Commands {
     })
   }
   showLog(buf, name) {
-    let plugin = this.plugins.find(o => {
-      return path.basename(o.directory) == name
-    })
+    let plugin = this.plugins.find(o => o.name == name)
     if (!plugin) {
       this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
-    let file = path.resolve(__dirname, '../log', name + '.log')
-    exec(`cat ${file}`, (err, stdout) => {
+    let file = path.resolve(__dirname, `../log/${name}.log`)
+    fs.readFile(file, 'utf8', (err, stdout) => {
       if (err) return console.error(err)
       let lines = stdout.split('\n')
       this.nvim.request('nvim_buf_set_lines', [buf, 0, lines.length, false, lines]).catch(err => {

@@ -56,6 +56,19 @@ export default class Plug {
     }
   }
 
+  @Command('PlugInstall', {
+    sync: false,
+    nargs: 1
+  })
+  async plugInstall(args) {
+    if (!command) {
+      await this.initCommand()
+    }
+    await this.nvim.command('edit plug://' + Date.now())
+    let nr = await this.nvim.eval('bufnr("%")')
+    command.install(nr, args[0])
+  }
+
   @Function('PlugRemove', { sync: false })
   async plugRemove(args) {
     let name = args[0]

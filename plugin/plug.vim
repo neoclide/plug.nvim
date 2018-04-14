@@ -16,8 +16,11 @@ function! s:SetDisplayView()
 endfunction
 
 function! s:SmartQuit()
-  if !get(g:, 'plug_updating', 0) | bwipe | endif
-  close!
+  if !get(g:, 'plug_updating', 0) 
+    bwipe
+  else
+    bunload!
+  endif
 endfunction
 
 function! s:ListPlugins(...)
@@ -97,7 +100,7 @@ function! s:Getname()
   let line = getline('.')
   let ms = matchlist(line, '\v^.\s(\S+)')
   if len(ms)
-    return ms[1]
+    return substitute(ms[1], ':$', '', '')
   endif
   return ''
 endfunction
