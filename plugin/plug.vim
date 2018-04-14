@@ -4,13 +4,8 @@ if exists('did_plug_loaded')
 endif
 let did_plug_loaded = 1
 
-command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call PlugUpdate(<f-args>)
-
 function! s:SetDisplayView()
-  setlocal filetype=plug
-  setlocal buftype=nofile
-  setlocal noswapfile
-  setlocal scrolloff=0
+  setl filetype=plug buftype=nofile noswapfile scrolloff=0
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
   exe 'nnoremap <buffer> <silent> r  :call <SID>DoAction("retry")<cr>'
   exe 'nnoremap <buffer> <silent> d  :call <SID>DoAction("diff")<cr>'
@@ -146,6 +141,9 @@ function! s:osascript(...) abort
     return
   endif
 endfunction
+
+command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call PlugUpdate(<f-args>)
+command! -nargs=1  -complete=custom,s:ListPlugins PlugRemove :call PlugRemove(<f-args>)
 
 augroup plug
   autocmd!

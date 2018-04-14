@@ -56,13 +56,11 @@ export default class Plug {
     }
   }
 
-  @Command('PlugRemove', {
-    sync: false,
-    nargs: '*'
-  })
+  @Function('PlugRemove', { sync: false })
   async plugRemove(args) {
+    let name = args[0]
     let plugins = await this.nvim.call('plug#plugins', [])
-    let plug = plugins.find(o => o.name == args[0])
+    let plug = plugins.find(o => o.name == name)
     if (plug) {
       await trash(plug.directory)
       await this.nvim.command(`echom "Removed ${plug.directory}"`)

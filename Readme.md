@@ -63,7 +63,6 @@ syntax on
 * `g:plug_rebase`: use rebase (git pull --rebase --autostash) for update, default to `0`
 * `g:plug_url_format`: format string for git remote location, default:
   `https://github.com/%s.git`
-* `g:plug_clean_command`: custom command for remove directory by `PlugClean`, default is `rm -rf` (or `rmdir` on windows)
 
 ## Keymaps
 

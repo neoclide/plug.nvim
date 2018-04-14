@@ -60,7 +60,7 @@ function! plug#begin(...)
             \})
     endif
   endfor
-  if find == 0
+  if empty(find)
     echoerr '[plug.nvim] plug.nvim not found in runtimepath'
   endif
 endfunction
