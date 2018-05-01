@@ -22,6 +22,7 @@
     "neovim": "^3.5.2",
     "node-parallel": "^0.1.6",
     "node-serial": "^0.1.1",
+    "pify": "^3.0.0",
     "semver": "^5.5.0",
     "trash": "^4.3.0"
   },

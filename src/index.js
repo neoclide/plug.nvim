@@ -1,6 +1,7 @@
 import { Plugin, Function, Autocmd, Command } from 'neovim'
 import Commands from './commands'
 import fs from 'fs'
+import path from 'path'
 const trash = require('trash')
 const pify = require('pify')
 const exec = require('child_process').exec
@@ -47,11 +48,31 @@ export default class Plug {
     sync: true,
   })
   async plugCheck() {
+    // check not installed plugins
     let plugins = await this.nvim.call('plug#plugins', [])
+    let dirs = []
     for (let plug of plugins) {
-      let stat = await pify(fs.stat)(plug.directory)
-      if (!stat.isDirectory()) {
-        await this.nvim.command(`echoerr '${plug.directory} not exists!'`)
+      let dir = plug.directory
+      try {
+        let stat = await pify(fs.stat)(dir)
+        if (!stat.isDirectory()) {
+          await this.nvim.command(`echoerr '${dir} not a directory!'`)
+        } else {
+          dirs.push(path.basename(dir))
+        }
+      } catch (e) {
+        await this.nvim.command(`echoerr '${dir} not exists!'`)
+      }
+    }
+    // check not activted plugins
+    let baseDir = path.join(process.env.HOME, '.vim/bundle')
+    let files = await pify(fs.readdir)(baseDir)
+    for (let file of files) {
+      let dir = path.join(baseDir, file)
+      let stat = await pify(fs.stat)(dir)
+      if (stat.isDirectory() && dirs.indexOf(file) === -1) {
+        await this.nvim.command(`echom 'Removing ${file} to trash'`)
+        await trash(dir)
       }
     }
   }
