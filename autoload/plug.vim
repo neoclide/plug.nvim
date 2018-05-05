@@ -69,7 +69,6 @@ function! plug#end()
   if s:plug_loaded | return | endif
   let prepends = join(map(copy(s:plug_plugins), 'v:val.directory'), ',')
   let appends = join(s:plug_after_plugins, ',')
-  let g:a = appends
   exec 'set rtp^='.fnameescape(prepends)
   exec 'set rtp+='.fnameescape(appends)
   let s:plug_loaded = 1
