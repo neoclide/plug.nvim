@@ -5,7 +5,7 @@ endif
 let did_plug_loaded = 1
 
 function! s:SetDisplayView()
-  setl filetype=plug buftype=nofile noswapfile scrolloff=0
+  setl filetype=plug buftype=nofile noswapfile scrolloff=0 wrap
   exe 'nnoremap <buffer> <silent> gl :call <SID>ShowGitLog()<cr>'
   exe 'nnoremap <buffer> <silent> r  :call <SID>DoAction("retry")<cr>'
   exe 'nnoremap <buffer> <silent> d  :call <SID>DoAction("diff")<cr>'
@@ -16,11 +16,7 @@ function! s:SetDisplayView()
 endfunction
 
 function! s:SmartQuit()
-  if !get(g:, 'plug_updating', 0) 
-    bwipe
-  else
-    bunload!
-  endif
+  bdelete!
 endfunction
 
 function! s:ListPlugins(...)
