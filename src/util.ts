@@ -1,40 +1,37 @@
-const exec = require('child_process').exec
-const fs = require('fs')
-const path = require('path')
+import { exec, ChildProcess } from 'child_process'
+import fs from 'fs'
+import path from 'path'
+import { PromisedFn } from './types'
 
-exports.setLines = function (nvim, buf, lines, cb) {
-  nvim.bufSetLines(buf, 0, lines.length, lines, cb)
-}
-
-exports.getRevs = function (directory) {
+export function getRevs(directory: string): Promise<string> {
   return new Promise(resolve => {
-    exec('git rev-parse --verify HEAD', {cwd: directory}, (err, stdout) => {
+    exec('git rev-parse --verify HEAD', { cwd: directory }, (err, stdout) => {
       if (err) return resolve('')
       resolve(stdout.replace(/\r?\n$/, ''))
     })
   })
 }
 
-exports.getBranch = function (directory) {
-  return new Promise(function(resolve, reject) {
+export function getBranch(directory: string): Promise<string> {
+  return new Promise((resolve, reject) => {
     exec('git symbolic-ref -q HEAD',
-      {cwd: directory}, function (err, stdout) {
-        if (err) return reject(err);
+      { cwd: directory }, (err, stdout) => {
+        if (err) return reject(err)
         let str = stdout.replace('\n', '').slice(11)
         if (str) return resolve(str)
         exec('git rev-parse --short HEAD | cut -c 2-',
-          {cwd: directory},
-          function (err, stdout) {
-          if (err) return reject(err)
-          resolve(stdout.replace(/\n$/, ''))
-        })
-    })
+          { cwd: directory },
+          (err, stdout) => {
+            if (err) return reject(err)
+            resolve(stdout.replace(/\n$/, ''))
+          })
+      })
   })
 }
 
-exports.exec = function (cmd, cwd) {
+export function execute(cmd, cwd): Promise<string> {
   return new Promise(resolve => {
-    exec(cmd, {cwd: cwd}, (err, stdout) => {
+    exec(cmd, { cwd }, (err, stdout) => {
       if (err) return resolve('')
       stdout = stdout || ''
       resolve(stdout.replace(/\r?\n$/, '\n'))
@@ -42,18 +39,18 @@ exports.exec = function (cmd, cwd) {
   })
 }
 
-exports.queue = function (fns, count) {
-  return new Promise(function(resolve, reject) {
+export function queue(fns: PromisedFn[], count: number): Promise<void> {
+  return new Promise((resolve, reject) => {
     let a = fns.slice(0, count)
     let b = fns.slice(count)
     let l = fns.length
     let runs = 0
-    if (fns.length == 0 ) return resolve()
+    if (fns.length == 0) return resolve()
     for (let fn of a) {
       fn().then(() => {
         runs += 1
         if (runs == l) return resolve()
-        let next = function () {
+        let next = () => {
           let fn = b.shift()
           if (!fn) return
           return fn().then(() => {
@@ -68,14 +65,15 @@ exports.queue = function (fns, count) {
   })
 }
 
-exports.proc = function (process, timeout, onupdate) {
+export function proc(process: ChildProcess, timeout: number, onupdate: (line: string) => void): Promise<void> {
   let out = false
   process.stdout.setEncoding('utf8')
-  function onData(data) {
+  function onData(data): void {
     if (out) return
     let str = data.toString()
-    let lines = str.split(/\r?\n/)
+    let lines: string[] = str.split(/\r?\n/)
     lines.forEach(line => {
+      if (line.trim() == '') return
       if (/\r/.test(line)) {
         let arr = line.split(/\r/)
         onupdate(arr.reverse()[0].replace(/\s+$/, ''))
@@ -86,11 +84,11 @@ exports.proc = function (process, timeout, onupdate) {
   }
   process.stderr.on('data', onData)
   process.stdout.on('data', onData)
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     let t = setTimeout(() => {
       out = true
       process.kill('SIGKILL')
-    }, timeout*1000)
+    }, timeout * 1000)
     process.on('error', err => {
       reject(err)
     })
@@ -108,8 +106,8 @@ exports.proc = function (process, timeout, onupdate) {
   })
 }
 
-let isDirectory = exports.isDirectory = function (dir) {
-  return new Promise(function(resolve) {
+export function isDirectory(dir: string): Promise<boolean> {
+  return new Promise(resolve => {
     fs.stat(dir, (err, stat) => {
       if (err || !stat.isDirectory()) return resolve(false)
       resolve(true)
@@ -117,6 +115,6 @@ let isDirectory = exports.isDirectory = function (dir) {
   })
 }
 
-exports.isRemote = function (dir) {
+export function isRemote(dir: string): Promise<boolean> {
   return isDirectory(path.join(dir, 'rplugin'))
 }

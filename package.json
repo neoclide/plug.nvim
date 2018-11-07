@@ -1,30 +1,36 @@
 {
   "name": "plug.nvim",
-  "version": "1.0.0",
-  "description": "neovim plugin management",
+  "version": "0.1.0",
+  "description": "Plugin manager for neovim",
   "main": "lib/index.js",
-  "engines": {
-    "node": ">9.0"
+  "publisher": "chemzqm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neoclide/plug.nvim"
   },
+  "bugs": "https://github.com/neoclide/plug.nvim/issues",
   "scripts": {
-    "watch": "babel -wd lib src",
-    "build": "babel -d lib src"
+    "clean": "rimraf lib",
+    "build": "tsc -p tsconfig.json",
+    "prepare": "yarn clean && yarn build"
   },
   "author": "chemzqm@gmail.com",
-  "license": "MIT",
+  "license": "EPL-1.0",
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-plugin-transform-decorators-legacy": "^1.3.4",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
-    "babel-preset-env": "^1.6.1"
+    "@chemzqm/tsconfig": "^0.0.3",
+    "@chemzqm/tslint-config": "^1.0.17",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.11.0",
+    "typescript": "^3.1.3"
   },
   "dependencies": {
-    "neovim": "^3.5.2",
+    "@chemzqm/neovim": "^4.3.25",
+    "@types/node": "^10.12.2",
     "node-parallel": "^0.1.6",
     "node-serial": "^0.1.1",
-    "pify": "^3.0.0",
-    "semver": "^5.5.0",
-    "trash": "^4.3.0"
-  },
-  "browser": {}
+    "pify": "^4.0.1",
+    "semver": "^5.6.0",
+    "trash": "^4.3.0",
+    "tslib": "^1.9.3"
+  }
 }

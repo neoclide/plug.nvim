@@ -80,19 +80,28 @@ endfunction
 function! s:DoAction(type)
   let name = s:Getname()
   if empty(name) | return | endif
-  if a:type == 'retry'
-    call PlugRetry(name)
+  if a:type ==# 'retry'
+    call plug#notify('retry', name)
     return
   endif
   let bufnr = plug#open_preview(a:type, name)
-  if a:type == 'diff'
-    call PlugDiff(bufnr, name)
-  elseif a:type == 'log'
-    call PlugLog(bufnr, name)
+  if a:type ==# 'diff'
+    call plug#notify('diff', bufnr, name)
+  elseif a:type ==# 'log'
+    call plug#notify('log', bufnr, name)
   endif
 endfunction
 
 function! s:Getname()
+  let line = getline('.')
+  let ms = matchlist(line, '\v^.\s(\S+)')
+  if len(ms)
+    return substitute(ms[1], ':$', '', '')
+  endif
+  return ''
+endfunction
+
+function! Getname()
   let line = getline('.')
   let ms = matchlist(line, '\v^.\s(\S+)')
   if len(ms)
@@ -141,8 +150,10 @@ function! s:osascript(...) abort
   endif
 endfunction
 
-command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call PlugUpdate(<f-args>)
-command! -nargs=1  -complete=custom,s:ListPlugins PlugRemove :call PlugRemove(<f-args>)
+command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call plug#notify('update', <f-args>)
+command! -nargs=1  -complete=custom,s:ListPlugins PlugRemove :call plug#notify('remove', <f-args>)
+command! -nargs=0  -complete=custom,s:ListPlugins PlugCheck :call plug#notify('check')
+command! -nargs=1  -complete=custom,s:ListPlugins PlugInstall :call plug#notify('install', <f-args>)
 
 augroup plug
   autocmd!

@@ -1,3 +1,7 @@
+if exists('did_plug_vim_loaded')
+  finish
+endif
+let did_plug_vim_loaded = 1
 let g:plug_shadow = get(g:, 'plug_shadow', 1)
 let g:plug_threads = get(g:, 'plug_threads', 8)
 let g:plug_timeout = get(g:, 'plug_timeout', 30)
@@ -5,13 +9,14 @@ let g:plug_rebase = get(g:, 'plug_rebase', 0)
 let g:plug_url_format = get(g:, 'plug_url_format', 'https://github.com/%s.git')
 
 let s:plug_root = ''
-
 let s:plug_plugins = []
 let s:plug_after_plugins = []
 let s:plug_loaded = 0
 let s:is_win = has("win32") || has('win64')
-
 let s:saved_pvh = &previewheight
+let s:root = expand('<sfile>:h:h')
+let s:failed = 0
+let s:job_opts = {}
 
 command! -nargs=* -bar Plug :call plug#add(<args>)
 
@@ -107,4 +112,64 @@ function! s:home()
     return $VIM."/vimfiles"
   endif
   return $HOME."/.vim"
+endfunction
+
+function! plug#start_server()
+  let cmd = ['node', s:root . '/bin/server.js']
+  let cid = jobstart(cmd, s:job_opts)
+  if cid <= 0
+    echohl Error | echom '[plug.nvim] Failed to start service' | echohl None
+    let s:failed = 1
+    return
+  endif
+endfunction
+
+function! s:job_opts.on_stderr(chan_id, data, event) dict
+  for msg in a:data
+    if !empty(msg)
+      echohl Error | echom msg | echohl None
+    endif
+  endfor
+endfunction
+
+function! s:job_opts.on_stdout(chan_id, data, event) dict
+  for msg in a:data
+    if !empty(msg)
+      echom msg
+    endif
+  endfor
+endfunction
+
+function! s:job_opts.on_exit(chan_id, code, event) dict
+  let g:plug_channel_id = 0
+  if v:dying != 0 | return | endif
+  if a:code != 0
+    let s:failed = 1
+    echohl Error | echomsg '[plug.nvim] Abnormal exited' | echohl None
+  endif
+endfunction
+
+function! plug#notify(method, ...) abort
+  let channel = get(g:, 'plug_channel_id', 0)
+  if channel
+    call call('rpcnotify', [channel, a:method] + a:000)
+  else
+    let s:failed = 0
+    call plug#start_server()
+    let n = 0
+    while 1
+      sleep 200m
+      let n = n + 1
+      if s:failed | return | endif
+      if n == 10
+        echohl Error | echom '[plug.nvim] Server start timeout after 2s.' | echohl None
+        return
+      endif
+      let channel = get(g:, 'plug_channel_id', 0)
+      if channel
+        call call('rpcnotify', [channel, a:method] + a:000)
+        return
+      endif
+    endw
+  endif
 endfunction

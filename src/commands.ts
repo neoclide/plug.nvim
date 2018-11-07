@@ -1,26 +1,32 @@
-const spawn = require('child_process').spawn
-const exec = require('child_process').exec
-const path = require('path')
-const util = require('./util')
-const semver = require('semver')
-const Parallel = require('node-parallel')
-const Serial = require('node-serial')
-const fs = require('fs')
+import { spawn, exec } from 'child_process'
+import path from 'path'
+import * as util from './util'
+import semver from 'semver'
+import Parallel from 'node-parallel'
+import Serial from 'node-serial'
+import fs from 'fs'
+import { NeovimClient as Neovim } from '@chemzqm/neovim'
+import { Config, Status, Logs } from './types'
 
 export default class Commands {
-  constructor(nvim, config) {
-    this.nvim = nvim
-    this.config = config
+  private status: { [key: string]: Status }
+  private shadow: boolean
+  private threads: number
+  private timeout: number
+  private plugins: any[]
+  private useRebase: boolean
+  private logs: Logs
+  private ellipse: number
+  private updating: boolean
+  private total = 0
+  constructor(private nvim: Neovim, private config: Config) {
     this.status = {}
     this.logs = {}
-
     this.shadow = config.shadow
     this.threads = config.threads
     this.timeout = config.timeout
     this.plugins = config.plugins
-
     this.useRebase = config.rebase && semver.gt(config.version, '2.9.0')
-
     let updating = false
     Object.defineProperty(this, 'updating', {
       get: () => {
@@ -28,13 +34,11 @@ export default class Commands {
       },
       set: val => {
         updating = val
-        this.nvim.command(`let g:plug_updating=${val ? 1 : 0}`).catch(err => {
-          console.error(err)
-        })
+        this.nvim.command(`let g:plug_updating=${val ? 1 : 0}`, true)
       }
     })
   }
-  updateRemotePlugins() {
+  public updateRemotePlugins(): void {
     let stats = this.status
     let dirs = []
     Object.keys(stats).forEach(key => {
@@ -49,7 +53,7 @@ export default class Commands {
       p.add(done => {
         let docRoot = path.join(dir, 'doc')
         util.isDirectory(docRoot).then(res => {
-          if (res) this.nvim.command(`helptags ${docRoot}`).catch(() => {})
+          if (res) this.nvim.command(`helptags ${docRoot}`, true)
         }).then(() => {
           util.isRemote(dir).then(res => {
             if (res) shouldUpdate = true
@@ -60,13 +64,15 @@ export default class Commands {
     })
     p.done(() => {
       if (shouldUpdate) {
-        this.nvim.command('UpdateRemotePlugins').catch(() => {})
+        this.nvim.command('UpdateRemotePlugins', true)
       }
     })
   }
-  updateAll(buf) {
+
+  public updateAll(buf): void {
     this.status = {}
     this.logs = {}
+    this.total = this.plugins.length
     if (this.updating) {
       this.showErrorMsg('Plugin update in process')
       return
@@ -74,18 +80,18 @@ export default class Commands {
     let interval = setInterval(() => {
       this.updateView(buf)
     }, 200)
-    let self = this
     let plugins = this.plugins.filter(o => !o.frozen)
-    this.total = plugins.length
+    plugins.sort((a, b) => a.name > b.name ? 1 : -1)
     let fns = plugins.map(plugin => {
-      return function () {
-        let o = self.status[plugin.directory] = {}
-        o.revs = []
-        o.stat = 'updating'
-        return self.updatePlug(plugin).then(() => {
+      return () => {
+        let o = this.status[plugin.directory] = {
+          revs: {},
+          stat: 'updating'
+        }
+        return this.updatePlug(plugin).then(() => {
           o.stat = 'success'
         }, err => {
-          self.appendLog(plugin.directory, 'Error: ' + err.message)
+          this.appendLog(plugin.directory, 'Error: ' + err.message)
           o.stat = 'fail'
         })
       }
@@ -105,12 +111,13 @@ export default class Commands {
       process.exit(1)
     })
   }
-  updateView(bufnr) {
+  private updateView(bufnr): void {
     let lines = []
     let dirs = Object.keys(this.status)
     let total = this.total
     let arr = []
     let stats = (new Array(total)).fill(' ')
+    dirs.sort((a, b) => b > a ? 1 : -1)
     dirs.forEach((dir, i) => {
       let o = this.status[dir]
       let buf = ''
@@ -141,7 +148,7 @@ export default class Commands {
         } else if (o.revs.from == o.revs.to) {
           buf += ' Already up-to-date.'
         } else {
-          buf += ` Updated [${o.revs.from.slice(0,8)} - ${o.revs.to.slice(0,8)}]`
+          buf += ` Updated [${o.revs.from.slice(0, 8)} - ${o.revs.to.slice(0, 8)}]`
         }
       } else {
         let msgs = this.logs[dir]
@@ -149,15 +156,10 @@ export default class Commands {
       }
       arr.push(buf)
     })
-    arr.sort((a, b) => {
-      if (/:\s(Installed|Updated)/.test(a)) return 1
-      if (/:\s(Installed|Updated)/.test(b)) return -1
-      return 0
-    })
     if (!this.updating) {
       let success = stats.filter(o => o == 'o').length
       let fail = stats.filter(o => o == 'x').length
-      lines.push('Cost:' + this.ellipse/1000 + 's Success:' + success + ' Fail:' + fail)
+      lines.push('Cost:' + this.ellipse / 1000 + 's Success:' + success + ' Fail:' + fail)
     } else {
       const completed = dirs.filter(dir => {
         let o = this.status[dir]
@@ -168,31 +170,34 @@ export default class Commands {
     if (total > 1) lines.push('[' + stats.join('') + ']')
     lines.push('r -> retry | d -> diff | l -> log | t -> item tab | q -> quit')
     lines = lines.concat(arr.reverse())
-    this.nvim.request('nvim_buf_set_lines', [bufnr, 0, lines.length, false, lines]).catch(err => {
-      console.error(err.message)
+    let buf = this.nvim.createBuffer(bufnr)
+    buf.setLines(lines, {
+      start: 0,
+      end: -1,
+      strictIndexing: false
+    }).catch(_err => {
+      // noop
     })
   }
-  updatePlug(plugin) {
-    const {directory, name} = plugin
+  public async updatePlug(plugin): Promise<void> {
+    const { directory, name } = plugin
     let file = path.resolve(__dirname, '../log', name + '.log')
     fs.unlink(file, () => { })
-    return util.isDirectory(directory).then(res => {
-      let o = this.status[plugin.directory]
-      o.revs = {}
-      if (res) {
-        o.stat = 'updating'
-        return this.pull(plugin)
-      }
-      o.method = 'installing'
-      return this.clone(plugin)
-    })
+    let isDirectory = await util.isDirectory(directory)
+    let o = this.status[plugin.directory]
+    o.revs = {}
+    if (isDirectory) {
+      o.stat = 'updating'
+      await this.pull(plugin)
+    } else {
+      o.stat = 'installing'
+      await this.clone(plugin)
+    }
   }
-  showErrorMsg(msg) {
-    this.nvim.command(`echoerr '${msg.replace(/'/g, "''")}'`).catch(() => {
-      console.error(msg)
-    })
+  private showErrorMsg(msg): void {
+    this.nvim.command(`echoerr '${msg.replace(/'/g, "''")}'`, true)
   }
-  install(buf, repo) {
+  public async install(buf, repo): Promise<void> {
     let name = repo.replace(/^[^/]+\//, '')
     this.plugins = [{
       name,
@@ -202,9 +207,9 @@ export default class Commands {
       frozen: 0,
       do: ''
     }]
-    this.update(buf, name, false)
+    await this.update(buf, name, false)
   }
-  update(buf, name, isRetry) {
+  public async update(buf, name, isRetry = false): Promise<void> {
     if (this.updating) {
       this.showErrorMsg('Plugin update in process')
       return
@@ -224,25 +229,29 @@ export default class Commands {
       this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
-    let o = this.status[plugin.directory] = {}
-    this.updatePlug(plugin).then(() => {
+    let o = this.status[plugin.directory] = {
+      revs: {},
+      stat: 'updating'
+    }
+    try {
+      await this.updatePlug(plugin)
       o.stat = 'success'
       this.updating = false
       this.ellipse = Date.now() - start
-      this.updateRemotePlugins()
-      this.updateView(buf)
-      clearInterval(interval)
-    }, err => {
+    } catch (err) {
       this.showErrorMsg(`Update error on ${plugin.name}: ${err.message}`)
       o.stat = 'fail'
       this.ellipse = Date.now() - start
       this.updating = false
       this.updateView(buf)
       clearInterval(interval)
-    })
+    }
+    this.updateRemotePlugins()
+    this.updateView(buf)
+    clearInterval(interval)
   }
-  clone(plugin) {
-    const {remote, name, directory, dest} = plugin
+  public async clone(plugin): Promise<void> {
+    const { remote, name, directory, dest } = plugin
     const cmd = plugin['do']
     const stat = this.status[directory]
     const cwd = path.dirname(plugin.directory)
@@ -250,50 +259,34 @@ export default class Commands {
     if (this.shadow) args.push('--depth=1', '--shallow-submodules')
     this.appendLog(directory, 'cd ' + cwd)
     this.appendLog(directory, 'git ' + args.join(' '))
-    let {timeout} = this
-    return util.proc(spawn('git', args, {cwd: cwd}), timeout, line => {
-      this.appendLog(directory, line)
-    }).then(() => {
+    let { timeout } = this
+    try {
+      await util.proc(spawn('git', args, { cwd }), timeout, line => {
+        this.appendLog(directory, line)
+      })
       if (cmd) {
-        this.appendLog(directory, cmd)
-        return util.exec(cmd, directory).then(stdout => {
-          stdout.split(/\n/).forEach(line => {
-            this.appendLog(directory, line)
-          })
+        this.appendLog(directory, `Run command: ${cmd}`)
+        let stdout = await util.execute(cmd, directory)
+        stdout.split(/\n/).forEach(line => {
+          this.appendLog(directory, line)
         })
       }
-    }).then(() => {
       if (dest) {
-        return util.exec(`git checkout ${dest}`, cwd).then((stdout, stderr) => {
-          stderr.split(/\n/).forEach(line => {
-            this.appendLog(directory, line)
-          })
-          stdout.split(/\n/).forEach(line => {
-            this.appendLog(directory, line)
-          })
+        this.appendLog(directory, `Checkout: ${dest}`)
+        let stdout = await util.execute(`git checkout ${dest}`, directory)
+        stdout.split(/\n/).forEach(line => {
+          this.appendLog(directory, line)
         })
       }
-    }).then(() => {
-      return util.getRevs(directory).then(rev => {
-        stat.revs.to = rev
-      })
-    }).then(() => {
-      return util.getBranch(directory).then(branch => {
-        stat.branch = branch
-      })
-    }).then(() => {
-      return new Promise((resolve, reject) => {
-        this.updateSubmodule(directory, 'init', err => {
-          if (err) return reject(err)
-          resolve()
-        })
-      })
-    }).catch(err => {
-      this.appendLog(err.message)
-    })
+      stat.revs.to = await util.getRevs(directory)
+      stat.branch = await util.getBranch(directory)
+      await this.updateSubmodule(directory, 'init')
+    } catch (e) {
+      this.appendLog(directory, e.message)
+    }
   }
-  pull(plugin) {
-    const {remote, directory, dest} = plugin
+  public pull(plugin): Promise<void> {
+    const { remote, directory, dest } = plugin
     const cmd = plugin['do']
     const stat = this.status[directory]
     const args = ['pull', remote, '--progress', '--stat']
@@ -309,14 +302,14 @@ export default class Commands {
       }, cb)
     })
     s.add(cb => {
-      const proc = spawn('git', args, {cwd: directory})
+      const proc = spawn('git', args, { cwd: directory })
       util.proc(proc, this.timeout, line => {
         this.appendLog(directory, line)
       }).then(cb, cb)
     })
     s.add(cb => {
       if (!dest) return cb()
-      const proc = spawn('git', ['checkout', dest], {cwd: directory})
+      const proc = spawn('git', ['checkout', dest], { cwd: directory })
       util.proc(proc, this.timeout, line => {
         this.appendLog(directory, line)
       }).then(cb, cb)
@@ -334,14 +327,14 @@ export default class Commands {
       }, cb)
     })
     s.add(cb => {
-      this.updateSubmodule(directory, 'update', cb)
+      this.updateSubmodule(directory, 'update').then(cb, cb)
     })
     s.add(cb => {
       if (!cmd) return cb()
-      let {from, to} = stat.revs
+      let { from, to } = stat.revs
       if (from == to) return cb()
       this.appendLog(directory, cmd)
-      util.exec(cmd, directory).then(stdout => {
+      util.execute(cmd, directory).then(stdout => {
         stdout.split(/\n/).forEach(line => {
           this.appendLog(directory, line)
         })
@@ -355,35 +348,32 @@ export default class Commands {
       })
     })
   }
-  appendLog(dir, line) {
+  private appendLog(dir: string, line: string): void {
     if (/^\s*$/.test(line)) return
     let list = this.logs[dir] || []
     list.push(line)
     this.logs[dir] = list
     let name = path.basename(dir)
     let file = path.resolve(__dirname, '../log', name + '.log')
-    fs.appendFile(file, line + '\n', 'utf8', err => {
-      if (err) {
-        console.error(err)
-      }
-    })
+    fs.appendFileSync(file, line + '\n', 'utf8')
   }
-  showLog(buf, name) {
+  public showLog(buf: number, name: string): void {
     let plugin = this.plugins.find(o => o.name == name)
     if (!plugin) {
       this.showErrorMsg(`Plugin ${name} not found`)
       return
     }
     let file = path.resolve(__dirname, `../log/${name}.log`)
-    fs.readFile(file, 'utf8', (err, stdout) => {
-      if (err) return console.error(err)
-      let lines = stdout.split('\n')
-      this.nvim.request('nvim_buf_set_lines', [buf, 0, lines.length, false, lines]).catch(err => {
-        console.error(err.message)
-      })
+    let content = fs.readFileSync(file, 'utf8')
+    let lines = content.split('\n')
+    let buffer = this.nvim.createBuffer(buf)
+    buffer.setLines(lines, {
+      start: 0,
+      end: -1,
+      strictIndexing: false
     })
   }
-  diff(buf, name) {
+  public diff(buf, name): void {
     let plugin = this.plugins.find(o => o.name == name)
     if (!plugin) {
       this.showErrorMsg(`Plugin ${name} not found`)
@@ -401,18 +391,25 @@ export default class Commands {
       } else {
         msgs = stdout.split(/\r?\n/)
       }
-      this.nvim.request('nvim_buf_set_lines', [buf, 0, msgs.length, false, msgs]).catch(err => {
-        console.error(err.message)
+      let buffer = this.nvim.createBuffer(buf)
+      buffer.setLines(msgs, {
+        start: 0,
+        end: -1,
+        strictIndexing: false
       })
     })
   }
-  updateSubmodule(directory, method, cb) {
-    fs.access(path.join(directory, '.gitmodules'), fs.W_OK, err => {
-      if (err) return cb()
-      let proc = spawn('git', ['submodule', method], {cwd: directory})
-      util.proc(proc, this.timeout, line => {
-        this.appendLog(directory, line)
-      }).then(cb, cb)
+  private updateSubmodule(directory: string, method: string): Promise<void> {
+    return new Promise(resolve => {
+      fs.exists(path.join(directory, '.gitmodules'), exists => {
+        if (!exists) return resolve()
+        let proc = spawn('git', ['submodule', method], { cwd: directory })
+        util.proc(proc, this.timeout, line => {
+          this.appendLog(directory, line)
+        }).then(resolve, () => {
+          resolve()
+        })
+      })
     })
   }
 }
