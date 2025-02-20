@@ -152,7 +152,7 @@ endfunction
 
 command! -nargs=?  -complete=custom,s:ListPlugins PlugUpdate :call plug#notify('update', <f-args>)
 command! -nargs=1  -complete=custom,s:ListPlugins PlugRemove :call plug#notify('remove', <f-args>)
-command! -nargs=0  -complete=custom,s:ListPlugins PlugCheck :call plug#notify('check')
+command! -nargs=0  PlugCheck :call plug#notify('check')
 command! -nargs=1  -complete=custom,s:ListPlugins PlugInstall :call plug#notify('install', <f-args>)
 
 augroup plug

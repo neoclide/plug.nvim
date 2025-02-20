@@ -31,9 +31,12 @@ function! plug#add(name, ...) abort
   let root = get(opts, 'dir', s:plug_root)
   let remote = printf(g:plug_url_format, a:name)
   let dest = get(opts, 'branch', get(opts, 'tag', get(opts, 'commit', '')))
+  let sub = get(opts, 'sub', '')
+  let directory = root.'/'.name . (len(sub) ? '/'.sub : '')
   let item = {
       \ 'name': name,
-      \ 'directory': root.'/'.name,
+      \ 'directory': directory,
+      \ 'sub': sub,
       \ 'remote': remote,
       \ 'dest': dest,
       \ 'frozen': get(opts, 'frozen', 0),
@@ -115,7 +118,7 @@ function! s:home()
 endfunction
 
 function! plug#start_server()
-  let cmd = ['node', s:root . '/bin/server.js']
+  let cmd = ['node', s:root . '/bin/server.js', v:servername]
   let cid = jobstart(cmd, s:job_opts)
   if cid <= 0
     echohl Error | echom '[plug.nvim] Failed to start service' | echohl None
